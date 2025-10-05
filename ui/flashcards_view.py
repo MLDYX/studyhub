@@ -2,15 +2,15 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
-class NotesView(QWidget):
+class FlashcardsView(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("notesRoot")
+        self.setObjectName("flashcardsRoot")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(16)
 
-        title = QLabel("Notatki")
+        title = QLabel("Fiszki")
         title.setObjectName("h1")
         layout.addWidget(title)
 
