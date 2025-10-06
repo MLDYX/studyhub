@@ -344,6 +344,12 @@ class MainWindow(QMainWindow):
             QCalendarWidget QToolButton:hover {
                 color: #4c6ef5;
             }
+            QLabel#calendarHeaderLabel {
+                font-size: 16px;
+                font-weight: 600;
+                color: #1f2a4a;
+                letter-spacing: 0.2px;
+            }
             QCalendarWidget QAbstractItemView {
                 outline: none;
                 selection-background-color: transparent;
