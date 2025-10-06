@@ -237,6 +237,7 @@ class MainWindow(QMainWindow):
                 border-radius: 12px;
                 padding: 10px 20px;
                 font-weight: 600;
+                font-size: 14px;
                 border: none;
             }
             QPushButton#calendarActionPrimary:hover {
@@ -252,6 +253,7 @@ class MainWindow(QMainWindow):
                 border-radius: 12px;
                 padding: 10px 18px;
                 font-weight: 600;
+                font-size: 14px;
             }
             QPushButton#calendarActionSecondary:hover {
                 background-color: rgba(76, 110, 245, 0.12);
@@ -403,6 +405,51 @@ class MainWindow(QMainWindow):
             }
             QDialog {
                 background-color: #ffffff;
+            }
+            #eventDialog {
+                background-color: #ffffff;
+                border-radius: 20px;
+            }
+            #eventDialog QLabel {
+                color: #1f2a4a;
+                font-size: 14px;
+            }
+            #eventDialog QLineEdit,
+            #eventDialog QDateTimeEdit,
+            #eventDialog QTextEdit,
+            #eventDialog QComboBox {
+                border: 1px solid #d8dcf0;
+                border-radius: 10px;
+                padding: 8px 10px;
+                background-color: #f9faff;
+                font-size: 14px;
+            }
+            #eventDialog QDateTimeEdit#eventDateTime {
+                padding-right: 28px;
+            }
+            #eventDialog QDateTimeEdit::drop-down {
+                width: 20px;
+                border: none;
+            }
+            #eventDialog QDateTimeEdit::down-arrow {
+                image: url(assets/icons/chevron_down.svg);
+                width: 12px;
+                height: 12px;
+            }
+            #eventDialog QTextEdit {
+                min-height: 96px;
+            }
+            #eventDialog QDialogButtonBox QPushButton {
+                border-radius: 12px;
+                padding: 8px 18px;
+                font-weight: 600;
+            }
+            #eventDialog QDialogButtonBox QPushButton:hover {
+                background-color: rgba(76, 110, 245, 0.12);
+            }
+            #popupCalendarTitle {
+                font-weight: 600;
+                color: #1f2a4a;
             }
             """
         )

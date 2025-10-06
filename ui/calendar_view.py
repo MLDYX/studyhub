@@ -120,10 +120,12 @@ class CalendarView(QWidget):
 
         self._import_button = QPushButton("Importuj kalendarz")
         self._import_button.setObjectName("calendarActionSecondary")
+        self._import_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._import_button.clicked.connect(self._import_ics)
 
         self._add_button = QPushButton("Dodaj wydarzenie")
         self._add_button.setObjectName("calendarActionPrimary")
+        self._add_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._add_button.clicked.connect(self._add_event)
 
         layout.addWidget(self._import_button)
@@ -364,9 +366,6 @@ class EventCalendarWidget(QCalendarWidget):
                 self._title_label.setObjectName("calendarHeaderLabel")
                 self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 layout.insertWidget(1, self._title_label, 1)
-                layout.setStretchFactor(prev_button, 0) if prev_button else None
-                layout.setStretchFactor(self._title_label, 1)
-                layout.setStretchFactor(next_button, 0) if next_button else None
 
         self.currentPageChanged.connect(self._update_title)
         self._update_title(self.yearShown(), self.monthShown())
@@ -443,6 +442,13 @@ class EventCalendarWidget(QCalendarWidget):
                 painter.drawEllipse(QPoint(cx, center_y), dot_radius, dot_radius)
 
             painter.restore()
+
+    def event(self, event):  # type: ignore[override]
+        if event.type() in (event.Type.Enter, event.Type.HoverEnter):
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+        elif event.type() in (event.Type.Leave, event.Type.HoverLeave):
+            self.unsetCursor()
+        return super().event(event)
 
     def _update_title(self, year: int | None = None, month: int | None = None) -> None:
         if self._title_label is None:
@@ -585,6 +591,8 @@ class EventDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Edytuj wydarzenie" if event else "Nowe wydarzenie")
         self.delete_requested = False
+        self.setObjectName("eventDialog")
+        self.setMinimumWidth(440)
 
         self._event = event
 
@@ -601,11 +609,13 @@ class EventDialog(QDialog):
         self.start_edit = QDateTimeEdit()
         self.start_edit.setDisplayFormat("dd.MM.yyyy HH:mm")
         self.start_edit.setCalendarPopup(True)
+        self._setup_datetime_edit(self.start_edit)
         form.addRow("Początek", self.start_edit)
 
         self.end_edit = QDateTimeEdit()
         self.end_edit.setDisplayFormat("dd.MM.yyyy HH:mm")
         self.end_edit.setCalendarPopup(True)
+        self._setup_datetime_edit(self.end_edit)
         form.addRow("Koniec", self.end_edit)
 
         self.color_combo = _color_combo()
@@ -668,6 +678,79 @@ class EventDialog(QDialog):
             "description": self.description_edit.toPlainText(),
         }
 
+    def _setup_datetime_edit(self, edit: QDateTimeEdit) -> None:
+        edit.setObjectName("eventDateTime")
+        edit.setMinimumHeight(36)
+        calendar = edit.calendarWidget()
+        if calendar is None:
+            calendar = QCalendarWidget(edit)
+            edit.setCalendarWidget(calendar)
+
+        calendar.setGridVisible(False)
+        calendar.setHorizontalHeaderFormat(QCalendarWidget.HorizontalHeaderFormat.ShortDayNames)
+        calendar.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
+        calendar.setFirstDayOfWeek(Qt.DayOfWeek.Monday)
+        calendar.setLocale(QLocale(QLocale.Language.Polish, QLocale.Country.Poland))
+        calendar.setStyleSheet(
+            """
+            QWidget#qt_calendar_calendarview {
+                background-color: #ffffff;
+                border-radius: 12px;
+                selection-background-color: transparent;
+            }
+            QWidget#qt_calendar_navigationbar {
+                background-color: #ffffff;
+                border: none;
+            }
+            QWidget {
+                background-color: transparent;
+            }
+            """
+        )
+
+        try:
+            prev_button = calendar.findChild(QToolButton, "qt_calendar_prevmonth")
+            next_button = calendar.findChild(QToolButton, "qt_calendar_nextmonth")
+            for button, icon_name in ((prev_button, "chevron_left.svg"), (next_button, "chevron_right.svg")):
+                if button is not None:
+                    button.setIcon(QIcon(str(ASSETS_DIR / icon_name)))
+                    button.setIconSize(QSize(16, 16))
+                    button.setText("")
+                    button.setAutoRaise(True)
+
+            month_button = calendar.findChild(QToolButton, "qt_calendar_monthbutton")
+            year_button = calendar.findChild(QToolButton, "qt_calendar_yearbutton")
+            if month_button is not None:
+                month_button.hide()
+            if year_button is not None:
+                year_button.hide()
+
+            nav_bar = calendar.findChild(QWidget, "qt_calendar_navigationbar")
+            if nav_bar is not None:
+                layout = nav_bar.layout()
+                if layout is not None:
+                    layout.setContentsMargins(12, 6, 12, 6)
+                    layout.setSpacing(12)
+                    title = nav_bar.findChild(QLabel, "popupCalendarTitle")
+                    if title is None:
+                        title = QLabel(nav_bar)
+                        title.setObjectName("popupCalendarTitle")
+                        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        layout.insertWidget(1, title, 1)
+
+                    def update_label(year: int | None = None, month: int | None = None) -> None:
+                        local_locale = QLocale(QLocale.Language.Polish, QLocale.Country.Poland)
+                        y = year if year is not None else calendar.yearShown()
+                        m = month if month is not None else calendar.monthShown()
+                        month_name = local_locale.standaloneMonthName(m, QLocale.FormatType.LongFormat)
+                        title.setText(f"{month_name.capitalize()} {y}")
+
+                    calendar.currentPageChanged.connect(update_label)
+                    update_label()
+        except Exception:
+            # Jeśli modyfikacja UI kalendarza się nie powiedzie, ignorujemy aby uniknąć awarii.
+            pass
+
 
 class _DaySection:
     def __init__(self, header_label: QLabel, events_list: QListWidget) -> None:
@@ -695,7 +778,7 @@ def create_color_icon(color_hex: str, size: int = 14) -> QIcon:
     return QIcon(pixmap)
 
 
-def _color_combo() -> "QComboBox":
+def _color_combo():
     from PyQt6.QtWidgets import QComboBox
 
     combo = QComboBox()
