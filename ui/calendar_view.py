@@ -49,6 +49,8 @@ from core.calendar import CalendarStore, Event, COLOR_KEYS, COLOR_PRESETS, _week
 class CalendarView(QWidget):
     calendar_updated = pyqtSignal()
 
+    ###Test test test 
+
     def __init__(self, store: CalendarStore, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._store = store
