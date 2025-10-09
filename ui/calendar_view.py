@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
+import tempfile
+from urllib import request, error as urlerror
+import os
 
 from PyQt6.QtCore import (
     QDate,
@@ -39,6 +42,8 @@ from PyQt6.QtWidgets import (
     QWidget,
     QDateTimeEdit,
     QGraphicsOpacityEffect,
+    QLineEdit,
+    QDialogButtonBox,
 )
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets" / "icons"
@@ -146,19 +151,37 @@ class CalendarView(QWidget):
         self._play_fade_in()
 
     def _import_ics(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Importuj wydarzenia",
-            "",
-            "Pliki iCalendar (*.ics)",
-        )
-        if not path:
+        dialog = ImportCalendarDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
+
+        info = dialog.get_result()
+        if info is None:
+            return
+
+        mode, value = info
+        temp_path: Optional[str] = None
         try:
-            imported = self._store.import_ics(path)
+            if mode == "url":
+                try:
+                    data = request.urlopen(value, timeout=15).read()
+                except urlerror.URLError as exc:  # type: ignore[assignment]
+                    QMessageBox.warning(self, "Import nieudany", f"Nie można pobrać danych: {exc}")
+                    return
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".ics") as tmp:
+                    tmp.write(data)
+                    temp_path = tmp.name
+                target_path = temp_path
+            else:
+                target_path = value
+
+            imported = self._store.import_ics(target_path)
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Import nieudany", str(exc))
             return
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
 
         self.refresh_views()
         self.calendar_updated.emit()
@@ -172,7 +195,7 @@ class CalendarView(QWidget):
             QMessageBox.information(
                 self,
                 "Brak nowych wydarzeń",
-                "Nie znaleziono wydarzeń do importu w wybranym pliku.",
+                "Nie znaleziono wydarzeń do importu.",
             )
 
     def _add_event(self) -> None:
@@ -756,6 +779,80 @@ class _DaySection:
     def __init__(self, header_label: QLabel, events_list: QListWidget) -> None:
         self.header_label = header_label
         self.events_list = events_list
+
+
+class ImportCalendarDialog(QDialog):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Importuj kalendarz")
+        self.setObjectName("importDialog")
+        self.setMinimumWidth(420)
+        self._result: Optional[Tuple[str, str]] = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
+
+        title = QLabel("Dodaj kalendarz z linku lub pliku .ics")
+        title.setObjectName("dialogHeading")
+        layout.addWidget(title)
+
+        url_layout = QVBoxLayout()
+        url_layout.setSpacing(8)
+
+        url_label = QLabel("Adres URL kalendarza (ICS)")
+        url_label.setObjectName("dialogLabel")
+        url_layout.addWidget(url_label)
+
+        self.url_edit = QLineEdit()
+        self.url_edit.setPlaceholderText("https://...")
+        self.url_edit.setObjectName("importUrlField")
+        url_layout.addWidget(self.url_edit)
+
+        self.url_button = QPushButton("Importuj z linku")
+        self.url_button.setObjectName("importUrlButton")
+        self.url_button.clicked.connect(self._accept_url)
+        url_layout.addWidget(self.url_button)
+
+        layout.addLayout(url_layout)
+
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFrameShadow(QFrame.Shadow.Plain)
+        divider.setStyleSheet("color: #e4e7f7;")
+        layout.addWidget(divider)
+
+        self.file_button = QPushButton("Wybierz plik .ics")
+        self.file_button.setObjectName("importFileButton")
+        self.file_button.clicked.connect(self._select_file)
+        layout.addWidget(self.file_button)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
+
+    def _accept_url(self) -> None:
+        url = self.url_edit.text().strip()
+        if not url:
+            QMessageBox.warning(self, "Brak adresu", "Podaj poprawny adres URL kalendarza.")
+            return
+        self._result = ("url", url)
+        self.accept()
+
+    def _select_file(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Wybierz plik kalendarza",
+            "",
+            "Pliki iCalendar (*.ics)",
+        )
+        if not path:
+            return
+        self._result = ("file", path)
+        self.accept()
+
+    def get_result(self) -> Optional[Tuple[str, str]]:
+        return self._result
 
 
 def _format_event_label(event: Event) -> str:

@@ -451,5 +451,45 @@ class MainWindow(QMainWindow):
                 font-weight: 600;
                 color: #1f2a4a;
             }
+            #importDialog {
+                background-color: #ffffff;
+                border-radius: 20px;
+            }
+            #importDialog QLabel#dialogHeading {
+                font-size: 18px;
+                font-weight: 600;
+                color: #1f2a4a;
+            }
+            #importDialog QLabel#dialogLabel {
+                font-size: 14px;
+                color: #586176;
+            }
+            #importDialog QLineEdit#importUrlField {
+                border: 1px solid #d8dcf0;
+                border-radius: 10px;
+                padding: 8px 10px;
+                background-color: #f9faff;
+            }
+            #importDialog QPushButton#importUrlButton,
+            #importDialog QPushButton#importFileButton {
+                border-radius: 12px;
+                padding: 8px 18px;
+                font-weight: 600;
+                font-size: 14px;
+                background-color: #4c6ef5;
+                color: #ffffff;
+            }
+            #importDialog QPushButton#importUrlButton:hover,
+            #importDialog QPushButton#importFileButton:hover {
+                background-color: #3d59d4;
+            }
+            #importDialog QPushButton#importUrlButton:pressed,
+            #importDialog QPushButton#importFileButton:pressed {
+                background-color: #324abb;
+            }
+            #importDialog QDialogButtonBox QPushButton {
+                border-radius: 10px;
+                padding: 6px 16px;
+            }
             """
         )
