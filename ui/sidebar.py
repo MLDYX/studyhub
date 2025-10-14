@@ -13,7 +13,8 @@ ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets" / "icons"
 class Sidebar(QWidget):
     home_clicked = pyqtSignal()
     calendar_clicked = pyqtSignal()
-
+    notes_clicked = pyqtSignal()
+    mail_clicked = pyqtSignal()
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("sidebar")
@@ -43,16 +44,18 @@ class Sidebar(QWidget):
 
         self._buttons["home"] = self._create_button("Strona Główna", "home.svg")
         self._buttons["calendar"] = self._create_button("Kalendarz", "calendar.svg")
-        self._buttons["notes"] = self._create_button("Notatki", "notes.svg", enabled=False)
-        self._buttons["flashcards"] = self._create_button("Fiszki", "flashcards.svg", enabled=False)
+        self._buttons["notes"] = self._create_button("Notatki", "notes.svg")
+        self._buttons["mail"] = self._create_button("Mail", "mail.svg")
 
         section.addWidget(self._buttons["home"])
         section.addWidget(self._buttons["calendar"])
         section.addWidget(self._buttons["notes"])
-        section.addWidget(self._buttons["flashcards"])
+        section.addWidget(self._buttons["mail"])
 
         self._buttons["home"].clicked.connect(lambda: self._handle_click("home"))
         self._buttons["calendar"].clicked.connect(lambda: self._handle_click("calendar"))
+        self._buttons["notes"].clicked.connect(lambda: self._handle_click("notes"))
+        self._buttons["mail"].clicked.connect(lambda: self._handle_click("mail"))
 
         return section
 
@@ -74,7 +77,10 @@ class Sidebar(QWidget):
             self.home_clicked.emit()
         elif key == "calendar":
             self.calendar_clicked.emit()
-
+        elif key == "notes":
+            self.notes_clicked.emit()
+        elif key == "mail":
+            self.mail_clicked.emit()
     def set_active(self, key: str) -> None:
         if key == self._active_key:
             return

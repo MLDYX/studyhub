@@ -4,9 +4,9 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QStackedWidget, QV
 
 from core.calendar import CalendarStore
 from ui.calendar_view import CalendarView
-from ui.flashcards_view import FlashcardsView
 from ui.home_view import HomeView
 from ui.notes_view import NotesView
+from ui.mail_view import MailView
 from ui.sidebar import Sidebar, load_icon
 
 
@@ -43,22 +43,24 @@ class MainWindow(QMainWindow):
         self.home_view = HomeView(self._store)
         self.calendar_view = CalendarView(self._store)
         self.notes_view = NotesView()
-        self.flashcards_view = FlashcardsView()
+        self.mail_view = MailView()
 
         self.stack.addWidget(self.home_view)
         self.stack.addWidget(self.calendar_view)
         self.stack.addWidget(self.notes_view)
-        self.stack.addWidget(self.flashcards_view)
+        self.stack.addWidget(self.mail_view)
 
         self._view_indices = {
             "home": self.stack.indexOf(self.home_view),
             "calendar": self.stack.indexOf(self.calendar_view),
             "notes": self.stack.indexOf(self.notes_view),
-            "flashcards": self.stack.indexOf(self.flashcards_view),
+            "mail": self.stack.indexOf(self.mail_view),
         }
 
         self.sidebar.home_clicked.connect(lambda: self._switch_view("home"))
         self.sidebar.calendar_clicked.connect(lambda: self._switch_view("calendar"))
+        self.sidebar.notes_clicked.connect(lambda: self._switch_view("notes"))
+        self.sidebar.mail_clicked.connect(lambda: self._switch_view("mail"))
         self.calendar_view.calendar_updated.connect(self._handle_calendar_update)
 
         self._apply_styles()
@@ -110,7 +112,7 @@ class MainWindow(QMainWindow):
             #homeRoot,
             #calendarRoot,
             #notesRoot,
-            #flashcardsRoot {
+            #mailRoot {
                 background-color: transparent;
             }
             #cardsContainer,
@@ -205,6 +207,10 @@ class MainWindow(QMainWindow):
                 border-radius: 20px;
                 border: 1px solid #e4e7f7;
             }
+            QFrame#mailContainer {
+                background-color: #ffffff;
+                border-radius: 20px;
+            }
             #calendarToolbar {
                 background-color: #ffffff;
                 border: 1px solid #e4e7f7;
@@ -298,6 +304,13 @@ class MainWindow(QMainWindow):
                 background-color: transparent;
                 border: none;
             }
+            QSplitter#mailSplitter::handle {
+                background-color: #eef1ff;
+                width: 4px;
+            }
+            QSplitter#mailSplitter::handle:hover {
+                background-color: #d9defa;
+            }
             QScrollBar:vertical {
                 background: transparent;
                 width: 9px;
@@ -381,11 +394,11 @@ class MainWindow(QMainWindow):
             QFrame#moduleTile[variant="notes"] QLabel#moduleTitle {
                 color: #d05c1f;
             }
-            QFrame#moduleTile[variant="flashcards"] {
+            QFrame#moduleTile[variant="mail"] {
                 background-color: #f2f5ff;
                 border: 1px solid #cfd9ff;
             }
-            QFrame#moduleTile[variant="flashcards"] QLabel#moduleTitle {
+            QFrame#moduleTile[variant="mail"] QLabel#moduleTitle {
                 color: #3960f5;
             }
             QLabel#moduleTitle {
@@ -490,6 +503,104 @@ class MainWindow(QMainWindow):
             #importDialog QDialogButtonBox QPushButton {
                 border-radius: 10px;
                 padding: 6px 16px;
+            }
+            QComboBox#mailProviderCombo {
+                border: 1px solid #d8dcf0;
+                border-radius: 10px;
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+            QComboBox#mailProviderCombo::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: right;
+                width: 24px;
+                border-left: 1px solid rgba(76, 110, 245, 0.18);
+            }
+            QComboBox#mailProviderCombo::down-arrow {
+                image: url(assets/icons/chevron_down.svg);
+                width: 12px;
+                height: 12px;
+            }
+            QPushButton#mailAuthButton,
+            QPushButton#mailRefreshButton {
+                border-radius: 12px;
+                padding: 8px 18px;
+                font-weight: 600;
+                font-size: 14px;
+                border: 1px solid rgba(76, 110, 245, 0.4);
+                background-color: #ffffff;
+                color: #415165;
+            }
+            QPushButton#mailAuthButton:hover,
+            QPushButton#mailRefreshButton:hover {
+                background-color: #eef1ff;
+            }
+            QPushButton#mailAuthButton:pressed,
+            QPushButton#mailRefreshButton:pressed {
+                background-color: #dde3ff;
+            }
+            QListWidget#mailList {
+                background-color: #ffffff;
+                border: 1px solid #e6e8f2;
+                border-radius: 14px;
+                padding: 8px;
+            }
+            QListWidget#mailList::item {
+                border-radius: 10px;
+                padding: 10px 12px;
+                margin-bottom: 6px;
+            }
+            QListWidget#mailList::item:selected {
+                background-color: #edf0f6;
+                color: #1f2742;
+            }
+            QTextEdit#mailBody {
+                border: 1px solid #e4e7f7;
+                border-radius: 14px;
+                padding: 16px;
+                background-color: #ffffff;
+                font-size: 14px;
+            }
+            QLabel#mailStatus {
+                font-size: 13px;
+                color: #6b7287;
+            }
+            QFrame#mailCompose {
+                border: 1px solid #e6e8f2;
+                border-radius: 16px;
+                background-color: #ffffff;
+            }
+            QLabel#mailComposeTitle {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1f2a4a;
+            }
+            QLineEdit#mailComposeTo,
+            QLineEdit#mailComposeSubject,
+            QTextEdit#mailComposeBody {
+                border: 1px solid #d8dcf0;
+                border-radius: 10px;
+                padding: 8px 10px;
+                background-color: #ffffff;
+                font-size: 14px;
+            }
+            QTextEdit#mailComposeBody {
+                min-height: 120px;
+            }
+            QPushButton#mailSendButton {
+                border-radius: 12px;
+                padding: 8px 18px;
+                font-weight: 600;
+                font-size: 14px;
+                border: 1px solid rgba(76, 110, 245, 0.4);
+                background-color: #4c6ef5;
+                color: #ffffff;
+            }
+            QPushButton#mailSendButton:hover {
+                background-color: #3d59d4;
+            }
+            QPushButton#mailSendButton:pressed {
+                background-color: #324abb;
             }
             """
         )

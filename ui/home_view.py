@@ -98,7 +98,7 @@ class HomeView(QWidget):
         modules_tiles.setContentsMargins(0, 0, 0, 0)
         modules_tiles.setSpacing(12)
         modules_tiles.addWidget(self._create_module_tile("Notatki", "Funkcja dostępna wkrótce", variant="notes"))
-        modules_tiles.addWidget(self._create_module_tile("Fiszki", "Funkcja dostępna wkrótce", variant="flashcards"))
+        modules_tiles.addWidget(self._create_module_tile("Mail", "Funkcja dostępna wkrótce", variant="mail"))
         modules_tiles.addStretch(1)
 
         modules_layout.addLayout(modules_tiles)
