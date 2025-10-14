@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
 
         self.sidebar.home_clicked.connect(lambda: self._switch_view("home"))
         self.sidebar.calendar_clicked.connect(lambda: self._switch_view("calendar"))
+        self.sidebar.notes_clicked.connect(lambda: self._switch_view("notes"))
         self.calendar_view.calendar_updated.connect(self._handle_calendar_update)
 
         self._apply_styles()
