@@ -1,19 +1,22 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import (
-    QLabel, QVBoxLayout, QWidget, QFrame, QMessageBox, QFileDialog, QHBoxLayout, QPushButton, QSizePolicy
+    QLabel, QVBoxLayout, QWidget, QFrame, QMessageBox, QFileDialog,
+    QHBoxLayout, QPushButton, QTextEdit, QSpacerItem, QSizePolicy
 )
-import sys
+from PyQt6.QtGui import QIcon
 import os
-import subprocess
 import shutil
 
+FOLDER_BG_COLOR = "#fff9c4"
+
 class NotesView(QWidget):
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("notesRoot")
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(32, 32, 32, 32)
         self.main_layout.setSpacing(16)
+        self.init_notes_sidebar()
         self.init_main_view()
 
     def init_main_view(self):
@@ -23,187 +26,171 @@ class NotesView(QWidget):
         title.setObjectName("h1")
         self.main_layout.addWidget(title)
 
-        # Przycisk rozwijający sekcję aplikacji
-        self.expand_btn = QPushButton("▶ Aplikacje biurowe")
-        self.expand_btn.setCheckable(True)
-        self.expand_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                font-size: 15px;
-                text-align: left;
-            }
-            QPushButton:checked {
-                font-weight: bold;
-            }
-        """)
-        self.expand_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.expand_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.expand_btn.clicked.connect(self.toggle_office_section)
-        self.main_layout.addWidget(self.expand_btn)
-
-        # Kontener na kafelki aplikacji
-        self.office_section = QWidget()
-        office_row = QHBoxLayout(self.office_section)
-        office_row.setSpacing(16)
-        office_row.setContentsMargins(0, 0, 0, 0)
-
-        office_tiles = [
-            {
-                "label": "Word",
-                "icon": "W",
-                "bg_color": "#e6edff",
-                "icon_color": "#2b44ff",
-                "open_cmd": ["start", "", "winword:"]
-            },
-            {
-                "label": "Excel",
-                "icon": "E",
-                "bg_color": "#e6fff2",
-                "icon_color": "#109c70",
-                "open_cmd": ["start", "", "excel:"]
-            },
-            {
-                "label": "PowerPoint",
-                "icon": "P",
-                "bg_color": "#fff6f1",
-                "icon_color": "#d05c1f",
-                "open_cmd": ["start", "", "powerpoint:"]
-            },
-            {
-                "label": "Access",
-                "icon": "A",
-                "bg_color": "#f1fff6",
-                "icon_color": "#1f8a3a",
-                "open_cmd": ["start", "", "access:"]
-            },
-            {
-                "label": "Kalkulator",
-                "icon": "C",
-                "bg_color": "#f7f8fd",
-                "icon_color": "#7b8295",
-                "open_cmd": ["calc"]
-            },
-            {
-                "label": "Notatnik",
-                "icon": "N",
-                "bg_color": "#f7f8fd",
-                "icon_color": "#7b8295",
-                "open_cmd": ["notepad"]
-            },
-        ]
-        for tile_def in office_tiles:
-            tile = self.create_app_tile(
-                tile_def["label"],
-                tile_def["icon"],
-                tile_def["bg_color"],
-                tile_def["icon_color"],
-                tile_def["open_cmd"],
-                small=True
-            )
-            office_row.addWidget(tile)
-
-        self.office_section.setVisible(False)
-        self.main_layout.addWidget(self.office_section)
-
-        #Foldery
         self.folders = [
-            {
-                "label": "Zeszyt",
-                "bg_color": "#fff9c4",  
-                "folder_path": os.path.join(os.path.expanduser("~"), "Desktop")
-            },
-            {
-                "label": "Zdjęcia",
-                "bg_color": "#fff9c4", 
-                "folder_path": os.path.join(os.path.expanduser("~"), "Pictures")
-            },
-            {
-                "label": "Inne",
-                "bg_color": "#fff9c4", 
-                "folder_path": os.path.join(os.path.expanduser("~"), "Desktop")
-            },
+            {"label": "Zeszyt", "folder_path": os.path.join(os.path.expanduser("~"), "Desktop")},
+            {"label": "Zdjęcia", "folder_path": os.path.join(os.path.expanduser("~"), "Pictures")},
+            {"label": "Inne", "folder_path": os.path.join(os.path.expanduser("~"), "Desktop")},
         ]
 
         folders_row = QHBoxLayout()
         folders_row.setSpacing(24)
-
-        for folder_def in self.folders:
-            tile = self.create_folder_tile(folder_def["label"], folder_def["bg_color"], folder_def["folder_path"])
+        for folder in self.folders:
+            tile = self.create_folder_tile(folder["label"], FOLDER_BG_COLOR, folder["folder_path"])
             folders_row.addWidget(tile)
-
         self.main_layout.addLayout(folders_row)
         self.main_layout.addStretch(1)
+        self.notes_sidebar.raise_()
+
+    def init_notes_sidebar(self):
+        self.sidebar_width = 300
+        self.sidebar_collapsed_width = 32
+
+        self.notes_sidebar = QFrame(self)
+        self.notes_sidebar.setObjectName("notesSidebar")
+        self.notes_sidebar.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.notes_sidebar.setStyleSheet("""
+            QFrame#notesSidebar {
+                background-color: rgba(255,255,255,180);
+                border-left: 2px solid #e0e4f6;
+                border-top-left-radius: 60px;
+                border-bottom-left-radius: 60px;
+            }
+        """)
+        self.notes_sidebar.setGeometry(self.width() - self.sidebar_collapsed_width, 0, self.sidebar_width, self.height())
+        self.notes_sidebar.raise_()
+
+        # Przycisk toggle zawsze przy prawej krawędzi, wyśrodkowany w pionie
+        self.toggle_btn = QPushButton("<")
+        self.toggle_btn.setFixedWidth(self.sidebar_collapsed_width)
+        self.toggle_btn.setFixedHeight(48)
+        self.toggle_btn.setStyleSheet("""
+            QPushButton {
+                background: #e6edff;
+                border: none;
+                border-top-left-radius: 24px;
+                border-bottom-left-radius: 24px;
+                font-size: 18px;
+                color: #3960f5;
+            }
+            QPushButton:hover {
+                background: #d0e0ff;
+            }
+        """)
+        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.clicked.connect(self.toggle_notes_sidebar)
+
+        # Kalkulator
+        self.calc_btn = QPushButton()
+        self.calc_btn.setIcon(QIcon.fromTheme("accessories-calculator"))
+        self.calc_btn.setIconSize(QSize(28, 28))
+        self.calc_btn.setFixedSize(44, 44)
+        self.calc_btn.setStyleSheet("border: none; background: transparent;")
+        self.calc_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.calc_btn.clicked.connect(self.show_calculator)
+
+        # Notatki
+        self.notes_content = QWidget()
+        notes_content_layout = QVBoxLayout(self.notes_content)
+        notes_content_layout.setContentsMargins(16, 16, 16, 16)
+        notes_content_layout.setSpacing(12)
+        notes_label = QLabel("Twoje notatki")
+        notes_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        notes_content_layout.addWidget(notes_label)
+        self.notes_edit = QTextEdit()
+        self.notes_edit.setPlaceholderText("Zapisz tutaj swoje notatki...")
+        self.notes_edit.setStyleSheet("""
+            font-size: 15px;
+            border: 2px solid rgba(57, 96, 245, 0.3);
+            border-radius: 8px;
+            background: #f8faff;
+            margin-left: 8px;
+            min-height: 180px;
+            min-width: 180px;
+            padding: 14px;
+        """)
+        notes_content_layout.addWidget(self.notes_edit, stretch=1)
+
+        self.sidebar_layout = QVBoxLayout(self.notes_sidebar)
+        self.sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        self.sidebar_layout.setSpacing(0)
+
+        self.sidebar_expanded = False
+        self.set_sidebar_state(False)
+
+    def set_sidebar_state(self, expanded):
+        self.sidebar_expanded = expanded
+        # Wyczyść sidebar_layout
+        while self.sidebar_layout.count():
+            item = self.sidebar_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.setParent(None)
+            else:
+                sublayout = item.layout()
+                if sublayout:
+                    while sublayout.count():
+                        subitem = sublayout.takeAt(0)
+                        subwidget = subitem.widget()
+                        if subwidget:
+                            subwidget.setParent(None)
+        if expanded:
+            # Panel wysunięty: notatki na całą wysokość, toggle po prawej, kalkulator ukryty
+            content_row = QHBoxLayout()
+            content_row.setContentsMargins(0, 0, 0, 0)
+            content_row.setSpacing(0)
+            content_row.addWidget(self.notes_content, stretch=1)
+            # Przycisk toggle po prawej, wyśrodkowany w pionie
+            btn_col = QVBoxLayout()
+            btn_col.addStretch(1)
+            btn_col.addWidget(self.toggle_btn, alignment=Qt.AlignmentFlag.AlignRight)
+            btn_col.addStretch(1)
+            content_row.addLayout(btn_col)
+            self.sidebar_layout.addLayout(content_row)
+            self.calc_btn.hide()
+            self.notes_content.show()
+            self.toggle_btn.setText(">")
+            self.notes_sidebar.setGeometry(self.width() - self.sidebar_width, 0, self.sidebar_width, self.height())
+        else:
+            # Panel zwinięty: tylko toggle i kalkulator na dole
+            col = QVBoxLayout()
+            col.setContentsMargins(0, 0, 0, 0)
+            col.setSpacing(0)
+            col.addStretch(1)
+            col.addWidget(self.toggle_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+            col.addStretch(1)
+            col.addWidget(self.calc_btn, alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
+            self.sidebar_layout.addLayout(col)
+            self.calc_btn.show()
+            self.notes_content.hide()
+            self.toggle_btn.setText("<")
+            self.notes_sidebar.setGeometry(self.width() - self.sidebar_collapsed_width, 0, self.sidebar_collapsed_width, self.height())
+
+    def resizeEvent(self, event):
+        if hasattr(self, 'notes_sidebar'):
+            if self.sidebar_expanded:
+                self.notes_sidebar.setGeometry(self.width() - self.sidebar_width, 0, self.sidebar_width, self.height())
+            else:
+                self.notes_sidebar.setGeometry(self.width() - self.sidebar_collapsed_width, 0, self.sidebar_collapsed_width, self.height())
+        super().resizeEvent(event)
+
+    def toggle_notes_sidebar(self):
+        self.set_sidebar_state(not self.sidebar_expanded)
+
+    def show_calculator(self):
+        from ui.calculator_view import CalculatorDialog
+        dlg = CalculatorDialog(self)
+        dlg.exec()
 
     def clear_layout(self, layout):
         while layout.count():
             item = layout.takeAt(0)
             widget = item.widget()
-            if widget is not None:
+            if widget:
                 widget.setParent(None)
             else:
                 sublayout = item.layout()
-                if sublayout is not None:
+                if sublayout:
                     self.clear_layout(sublayout)
-
-    def toggle_office_section(self):
-        expanded = self.expand_btn.isChecked()
-        self.office_section.setVisible(expanded)
-        self.expand_btn.setText("▼ Aplikacje biurowe" if expanded else "▶ Aplikacje biurowe")
-
-    def create_app_tile(self, label, icon, bg_color, icon_color, open_cmd, small=False):
-        tile = QFrame()
-        tile.setObjectName("appTile")
-        tile.setCursor(Qt.CursorShape.PointingHandCursor)
-        if small:
-            tile.setFixedSize(80, 80)
-            icon_size = 32
-            border_radius = 14
-            border_width = 1.2
-            font_size = 12
-        else:
-            tile.setFixedSize(120, 120)
-            icon_size = 48
-            border_radius = 20
-            border_width = 1.5
-            font_size = 15
-        tile.setStyleSheet(f"""
-            QFrame#appTile {{
-                background-color: {bg_color};
-                border-radius: {border_radius}px;
-                border: {border_width}px solid #cfd9ff;
-            }}
-            QFrame#appTile:hover {{
-                background-color: #e6edff;
-                border: {border_width}px solid #3960f5;
-            }}
-        """)
-        tile_layout = QVBoxLayout(tile)
-        tile_layout.setContentsMargins(0, 0, 0, 0)
-        tile_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        icon_label = QLabel(icon)
-        icon_label.setObjectName("tileIcon")
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setStyleSheet(f"""
-            QLabel#tileIcon {{
-                font-size: {icon_size}px;
-                color: {icon_color};
-                font-weight: bold;
-            }}
-        """)
-        tile_layout.addWidget(icon_label)
-
-        text_label = QLabel(label)
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setStyleSheet(f"font-size: {font_size}px; font-weight: 600;")
-        tile_layout.addWidget(text_label)
-
-        def mousePressEvent(event):
-            self.open_app(open_cmd, label)
-        tile.mousePressEvent = mousePressEvent
-
-        return tile
 
     def create_folder_tile(self, label, bg_color, folder_path):
         tile = QFrame()
@@ -222,7 +209,6 @@ class NotesView(QWidget):
             }}
         """)
         tile_layout = QVBoxLayout(tile)
-        tile_layout.setContentsMargins(0, 0, 0, 0)
         tile_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         folder_icon = QLabel("📁")
@@ -261,17 +247,17 @@ class NotesView(QWidget):
         back_btn.clicked.connect(self.init_main_view)
         self.main_layout.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        # Dodaj tytuł folderu
         folder_label = QLabel(f"Folder: {label}")
         folder_label.setObjectName("h1")
         self.main_layout.addWidget(folder_label)
 
-        # Dodaj kafelek "Dodaj plik"
         add_tile = self.create_add_file_tile(folder_path)
         row = QHBoxLayout()
         row.addWidget(add_tile)
         self.main_layout.addLayout(row)
         self.main_layout.addStretch(1)
+
+        self.notes_sidebar.raise_()
 
     def create_add_file_tile(self, folder_path):
         tile = QFrame()
@@ -290,7 +276,6 @@ class NotesView(QWidget):
             }
         """)
         layout = QVBoxLayout(tile)
-        layout.setContentsMargins(0, 0, 0, 0)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         plus_label = QLabel("+")
@@ -329,12 +314,3 @@ class NotesView(QWidget):
                 QMessageBox.information(self, "Dodano plik", f"Plik został dodany do {folder_path}")
             except Exception as e:
                 QMessageBox.warning(self, "Błąd", f"Nie udało się dodać pliku: {e}")
-
-    def open_app(self, open_cmd, label):
-        try:
-            if sys.platform.startswith("win") and open_cmd[0] == "start":
-                subprocess.Popen(" ".join(open_cmd), shell=True)
-            else:
-                subprocess.Popen(open_cmd)
-        except Exception:
-            QMessageBox.warning(self, "Błąd", f"Nie można odnaleźć aplikacji: {label}")
