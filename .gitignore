@@ -1,0 +1,13 @@
+__pycache__/
+.venv/
+*.pyc
+.idea/
+.env/
+.ruff_cache/
+.test/
+data/user_credentials.json
+data/favorites.json
+data/cleanup_state.json
+data/pinned_folders.json
+data/settings.json
+data/user_credentials.json

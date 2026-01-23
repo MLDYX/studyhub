@@ -1,0 +1,12 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["."]
+extend-exclude = ["Prezentacje z zajec", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "B", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
